@@ -14,6 +14,15 @@ public class UpiInstrument extends PaymentInstrument {
     @Column(name = "provider", nullable = false)
     private String provider;
 
+    public UpiInstrument() {
+    }
+
+    public UpiInstrument(String instrumentLabel, Customer customer, String upiId, String provider) {
+        super(instrumentLabel, customer);
+        this.upiId = upiId;
+        this.provider = provider;
+    }
+
     public String getUpiId() {
         return upiId;
     }
