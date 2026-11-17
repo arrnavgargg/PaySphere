@@ -45,6 +45,10 @@ export default function App() {
                 <Route path="/card-payment" element={<CardPaymentPage />} />
                 <Route path="/net-banking" element={<NetBankingPage />} />
                 <Route path="/recharge" element={<RechargePage />} />
+                <Route path="/dth" element={<RechargePage initialTab="dth" />} />
+                <Route path="/electricity" element={<RechargePage initialTab="electricity" />} />
+                <Route path="/broadband" element={<RechargePage initialTab="broadband" />} />
+                <Route path="/fastag" element={<RechargePage initialTab="fastag" />} />
 
                 {/* Dev tools route */}
                 {isDevMode ? (
