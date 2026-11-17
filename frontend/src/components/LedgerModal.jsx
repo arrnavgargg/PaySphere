@@ -170,4 +170,3 @@ export default function LedgerModal({ referenceId, onClose }) {
     </div>
   );
 }
-

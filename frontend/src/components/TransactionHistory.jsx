@@ -316,4 +316,3 @@ export default function TransactionHistory({ refreshTrigger }) {
     </div>
   );
 }
-

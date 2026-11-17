@@ -1,36 +1,25 @@
 const API_BASE = '/api/v1';
 
-async function handleResponse(res, defaultErrorMsg) {
-  const text = await res.text();
-  let data = null;
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = null;
-    }
-  }
-
-  if (!res.ok) {
-    const errorMsg = data?.error || data?.message || text || `Server responded with status ${res.status}`;
-    throw new Error(errorMsg);
-  }
-
-  return data;
-}
-
 export async function authorizePayment(payload) {
   const res = await fetch(`${API_BASE}/payments/authorize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return handleResponse(res, 'Payment authorization failed');
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Payment authorization failed');
+  }
+  return data;
 }
 
 export async function getTransactionByIdempotency(key) {
   const res = await fetch(`${API_BASE}/payments/idempotency/${encodeURIComponent(key)}`);
-  return handleResponse(res, 'Transaction not found');
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Transaction not found');
+  }
+  return data;
 }
 
 export async function capturePayment(referenceId, amount) {
@@ -39,7 +28,11 @@ export async function capturePayment(referenceId, amount) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(amount ? { amount } : {}),
   });
-  return handleResponse(res, 'Capture failed');
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Capture failed');
+  }
+  return data;
 }
 
 export async function refundPayment(referenceId, amount, reason) {
@@ -51,22 +44,35 @@ export async function refundPayment(referenceId, amount, reason) {
       reason: reason || 'Customer refund request',
     }),
   });
-  return handleResponse(res, 'Refund failed');
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Refund failed');
+  }
+  return data;
 }
 
 export async function getAllPayments() {
   const res = await fetch(`${API_BASE}/payments`);
-  return handleResponse(res, 'Failed to fetch transactions');
+  if (!res.ok) {
+    throw new Error('Failed to fetch transactions');
+  }
+  return res.json();
 }
 
 export async function getLedgerEntries(referenceId) {
   const res = await fetch(`${API_BASE}/payments/${encodeURIComponent(referenceId)}/ledger`);
-  return handleResponse(res, 'Failed to fetch ledger entries');
+  if (!res.ok) {
+    throw new Error('Failed to fetch ledger entries');
+  }
+  return res.json();
 }
 
 export async function getAllCustomers() {
   const res = await fetch(`${API_BASE}/customers`);
-  return handleResponse(res, 'Failed to fetch customers');
+  if (!res.ok) {
+    throw new Error('Failed to fetch customers');
+  }
+  return res.json();
 }
 
 export async function createCustomer(payload) {
@@ -75,7 +81,11 @@ export async function createCustomer(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return handleResponse(res, 'Failed to create customer');
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to create customer');
+  }
+  return data;
 }
 
 export async function addCustomerInstrument(customerId, payload) {
@@ -84,7 +94,11 @@ export async function addCustomerInstrument(customerId, payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return handleResponse(res, 'Failed to add instrument');
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to add instrument');
+  }
+  return data;
 }
 
 export async function checkServerHealth() {
