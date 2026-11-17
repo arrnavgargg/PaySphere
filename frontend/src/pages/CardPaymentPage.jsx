@@ -11,7 +11,7 @@ export default function CardPaymentPage() {
   const { addToast } = useToast();
 
   const [cardNumber, setCardNumber] = useState('4242 4242 4242 4242');
-  const [cardHolder, setCardHolder] = useState(user?.fullName || 'Arnav Garg');
+  const [cardHolder, setCardHolder] = useState(user?.fullName || 'User');
   const [expiry, setExpiry] = useState('12/28');
   const [cvv, setCvv] = useState('888');
   const [amount, setAmount] = useState('750.00');

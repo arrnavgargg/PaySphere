@@ -11,7 +11,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const displayName = user?.fullName?.split(' ')[0] || 'Arnav';
+  const displayName = user?.fullName?.split(' ')[0] || 'User';
 
   const handlePayeeSelect = (payee) => {
     navigate('/pay', { state: { mode: 'UPI', payeeId: payee.upi, payeeName: payee.name } });

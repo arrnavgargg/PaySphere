@@ -29,7 +29,8 @@ export default function PayQrPage() {
   const [activeTab, setActiveTab] = useState('scan'); // 'scan' | 'my-qr'
   const [torchOn, setTorchOn] = useState(false);
 
-  const myUpiId = user ? `${user.email?.split('@')[0] || 'user'}@okpaysphere` : 'arnav@okpaysphere';
+  const userHandle = user?.email?.split('@')[0] || user?.fullName?.toLowerCase().replace(/\s+/g, '') || 'user';
+  const myUpiId = user?.upiId || `${userHandle}@okpaysphere`;
 
   const handleSelectPreset = (preset) => {
     navigate('/pay', {

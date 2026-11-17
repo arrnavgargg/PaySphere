@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getAllCustomers, createCustomer } from '../services/api';
+import { getAllCustomers, createCustomer, addCustomerInstrument } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -15,36 +15,72 @@ export function AuthProvider({ children }) {
 
   const [loading, setLoading] = useState(true);
 
-  // Initialize with backend customer if none saved
+  // Sync user with backend customers
   useEffect(() => {
-    if (!user) {
-      getAllCustomers()
-        .then((customers) => {
-          if (customers && customers.length > 0) {
-            const initialUser = {
-              id: customers[0].id,
-              fullName: customers[0].fullName,
-              email: customers[0].email,
-              phone: '9876543210',
+    getAllCustomers()
+      .then((customers) => {
+        if (!customers || customers.length === 0) return;
+
+        if (user) {
+          // If a user is already saved, find their latest database record
+          const matched = customers.find(
+            (c) =>
+              c.id === user.id ||
+              c.email?.toLowerCase() === user.email?.toLowerCase() ||
+              c.fullName?.toLowerCase() === user.fullName?.toLowerCase()
+          );
+
+          if (matched) {
+            const userHandle = matched.email?.split('@')[0] || matched.fullName?.toLowerCase().replace(/\s+/g, '') || 'user';
+            const autoUpi = `${userHandle}@okpaysphere`;
+            const upiInstrument = matched.instruments?.find((i) => i.type === 'UPI')?.detail;
+
+            const updatedUser = {
+              ...user,
+              id: matched.id,
+              fullName: matched.fullName,
+              email: matched.email,
+              upiId: upiInstrument || autoUpi,
+              instruments: matched.instruments || [],
             };
-            setUser(initialUser);
-            localStorage.setItem('paysphere_user', JSON.stringify(initialUser));
+            setUser(updatedUser);
+            localStorage.setItem('paysphere_user', JSON.stringify(updatedUser));
           }
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+        } else {
+          // No user saved yet — default to first customer
+          const first = customers[0];
+          const userHandle = first.email?.split('@')[0] || 'user';
+          const autoUpi = `${userHandle}@okpaysphere`;
+          const upiInstrument = first.instruments?.find((i) => i.type === 'UPI')?.detail;
+
+          const defaultUser = {
+            id: first.id,
+            fullName: first.fullName,
+            email: first.email,
+            phone: '9876543210',
+            upiId: upiInstrument || autoUpi,
+            instruments: first.instruments || [],
+          };
+          setUser(defaultUser);
+          localStorage.setItem('paysphere_user', JSON.stringify(defaultUser));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const login = async (emailOrPhone, password) => {
-    // Look up customer from backend by email if matches
     try {
       const customers = await getAllCustomers();
       const matched = customers.find(
-        (c) => c.email?.toLowerCase() === emailOrPhone.trim().toLowerCase()
+        (c) =>
+          c.email?.toLowerCase() === emailOrPhone.trim().toLowerCase() ||
+          c.fullName?.toLowerCase() === emailOrPhone.trim().toLowerCase()
       );
+
+      const userHandle = matched?.email?.split('@')[0] || emailOrPhone.split('@')[0] || 'user';
+      const autoUpi = `${userHandle}@okpaysphere`;
+      const upiInstrument = matched?.instruments?.find((i) => i.type === 'UPI')?.detail;
 
       const loggedUser = matched
         ? {
@@ -52,24 +88,31 @@ export function AuthProvider({ children }) {
             fullName: matched.fullName,
             email: matched.email,
             phone: '9876543210',
+            upiId: upiInstrument || autoUpi,
+            instruments: matched.instruments || [],
           }
         : {
             id: Date.now(),
-            fullName: emailOrPhone.includes('@') ? emailOrPhone.split('@')[0] : 'User',
+            fullName: emailOrPhone.includes('@') ? emailOrPhone.split('@')[0] : emailOrPhone,
             email: emailOrPhone.includes('@') ? emailOrPhone : `${emailOrPhone}@paysphere.app`,
             phone: !emailOrPhone.includes('@') ? emailOrPhone : '9876543210',
+            upiId: autoUpi,
+            instruments: [],
           };
 
       setUser(loggedUser);
       localStorage.setItem('paysphere_user', JSON.stringify(loggedUser));
       return loggedUser;
     } catch (err) {
-      // Fallback local session
+      const userHandle = emailOrPhone.includes('@') ? emailOrPhone.split('@')[0] : emailOrPhone;
+      const autoUpi = `${userHandle}@okpaysphere`;
       const fallbackUser = {
         id: 1,
-        fullName: emailOrPhone.includes('@') ? emailOrPhone.split('@')[0] : 'User',
+        fullName: userHandle,
         email: emailOrPhone.includes('@') ? emailOrPhone : `${emailOrPhone}@paysphere.app`,
         phone: '9876543210',
+        upiId: autoUpi,
+        instruments: [],
       };
       setUser(fallbackUser);
       localStorage.setItem('paysphere_user', JSON.stringify(fallbackUser));
@@ -78,12 +121,26 @@ export function AuthProvider({ children }) {
   };
 
   const register = async ({ fullName, email, phone, pin }) => {
-    // Call backend to persist customer
-    let savedCustomer;
+    const userHandle = email.split('@')[0] || fullName.toLowerCase().replace(/\s+/g, '') || 'user';
+    const autoUpi = `${userHandle}@okpaysphere`;
+
+    let savedCustomer = null;
     try {
       savedCustomer = await createCustomer({ fullName, email });
+      if (savedCustomer?.id) {
+        // Automatically link their personalized UPI ID in PostgreSQL!
+        try {
+          await addCustomerInstrument(savedCustomer.id, {
+            type: 'UPI',
+            instrumentLabel: `Primary UPI (${userHandle})`,
+            detail: autoUpi,
+            providerOrNetwork: 'PaySphere UPI',
+          });
+        } catch (e) {
+          console.warn('Auto instrument link warning:', e.message);
+        }
+      }
     } catch (err) {
-      // If customer already exists or creation failed, fall back gracefully
       console.warn('Backend customer creation note:', err.message);
     }
 
@@ -93,6 +150,16 @@ export function AuthProvider({ children }) {
       email,
       phone: phone || '9876543210',
       pin: pin || '1234',
+      upiId: autoUpi,
+      instruments: [
+        {
+          id: Date.now(),
+          type: 'UPI',
+          label: `Primary UPI (${userHandle})`,
+          detail: autoUpi,
+          providerOrNetwork: 'PaySphere UPI',
+        },
+      ],
     };
 
     setUser(newUser);
@@ -106,8 +173,14 @@ export function AuthProvider({ children }) {
   };
 
   const switchUser = (newUser) => {
-    setUser(newUser);
-    localStorage.setItem('paysphere_user', JSON.stringify(newUser));
+    const userHandle = newUser.email?.split('@')[0] || newUser.fullName?.toLowerCase().replace(/\s+/g, '') || 'user';
+    const autoUpi = newUser.upiId || `${userHandle}@okpaysphere`;
+    const userObj = {
+      ...newUser,
+      upiId: autoUpi,
+    };
+    setUser(userObj);
+    localStorage.setItem('paysphere_user', JSON.stringify(userObj));
   };
 
   return (
@@ -132,4 +205,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
-
