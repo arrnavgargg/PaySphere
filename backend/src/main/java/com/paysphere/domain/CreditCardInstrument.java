@@ -14,6 +14,15 @@ public class CreditCardInstrument extends PaymentInstrument {
     @Column(name = "card_network", nullable = false)
     private String cardNetwork;
 
+    public CreditCardInstrument() {
+    }
+
+    public CreditCardInstrument(String instrumentLabel, Customer customer, String maskedCardNumber, String cardNetwork) {
+        super(instrumentLabel, customer);
+        this.maskedCardNumber = maskedCardNumber;
+        this.cardNetwork = cardNetwork;
+    }
+
     public String getMaskedCardNumber() {
         return maskedCardNumber;
     }

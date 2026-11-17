@@ -2,6 +2,7 @@ package com.paysphere.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -23,12 +24,29 @@ public abstract class PaymentInstrument {
     @Column(name = "instrument_label", nullable = false)
     private String instrumentLabel;
 
-    @ManyToOne(optional = false)
+    /**
+     * Foreign Key Owner: The 'payment_instruments' table holds the 'customer_id' foreign key
+     * column referencing the 'customers' table ('customers.id').
+     * This establishes the child side of the Customer -> PaymentInstrument aggregation relationship.
+     */
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
+    public PaymentInstrument() {
+    }
+
+    public PaymentInstrument(String instrumentLabel, Customer customer) {
+        this.instrumentLabel = instrumentLabel;
+        this.customer = customer;
+    }
+
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getInstrumentLabel() {
