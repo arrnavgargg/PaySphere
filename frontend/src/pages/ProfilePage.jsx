@@ -20,6 +20,7 @@ import {
 import { getAllCustomers, addCustomerInstrument } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import Avatar from '../components/shared/Avatar';
 import { SkeletonRow } from '../components/shared/SkeletonLoader';
 
@@ -31,6 +32,7 @@ const DEFAULT_BANK_ACCOUNTS = [
 export default function ProfilePage() {
   const { dark, toggle } = useTheme();
   const { addToast } = useToast();
+  const { user: authUser, logout } = useAuth();
   const navigate = useNavigate();
 
   const isDevMode = import.meta.env.VITE_DEV_MODE === 'true';
@@ -43,7 +45,20 @@ export default function ProfilePage() {
   // Modals
   const [activeModal, setActiveModal] = useState(null); // 'UPI', 'CARD', 'BANK'
 
-  const user = customers[0] || null;
+  // Match the logged in user with backend customer records
+  const activeCustomer = customers.find(
+    (c) =>
+      c.id === authUser?.id ||
+      c.email?.toLowerCase() === authUser?.email?.toLowerCase() ||
+      c.fullName?.toLowerCase() === authUser?.fullName?.toLowerCase()
+  );
+
+  const user = activeCustomer || authUser || (customers.length > 0 ? customers[0] : null);
+
+  // Automate UPI ID based on the active user's username/email
+  const userHandle = user?.email?.split('@')[0] || user?.fullName?.toLowerCase().replace(/\s+/g, '') || 'user';
+  const automatedUpi = `${userHandle}@okpaysphere`;
+  const userUpi = user?.instruments?.find((i) => i.type === 'UPI')?.detail || user?.upiId || automatedUpi;
 
   const fetchUserData = async () => {
     try {
@@ -103,13 +118,13 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <div className="card" style={{ padding: 'var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-          <Avatar name={user?.fullName || 'Arnav Garg'} size={60} />
+          <Avatar name={user?.fullName || 'User'} size={60} />
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)' }}>
-              {user?.fullName || 'Arnav Garg'}
+              {user?.fullName || 'User'}
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginBottom: 4 }}>
-              {user?.email || 'arnav.garg@example.com'}
+              {user?.email || `${userHandle}@paysphere.app`}
             </p>
             <span style={{
               display: 'inline-flex',
@@ -122,7 +137,7 @@ export default function ProfilePage() {
               background: 'var(--color-accent-light)',
               color: 'var(--color-accent)',
             }}>
-              UPI ID: {user?.instruments?.find(i => i.type === 'UPI')?.detail || 'arnav@okaxis'}
+              UPI ID: {userUpi}
             </span>
           </div>
         </div>
@@ -218,8 +233,37 @@ export default function ProfilePage() {
           {loading ? (
             <div style={{ padding: 'var(--space-md)' }}><SkeletonRow /></div>
           ) : upiInstruments.length === 0 ? (
-            <div style={{ padding: 'var(--space-lg)', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
-              No UPI IDs saved yet.
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-md)',
+                padding: '14px var(--space-md)',
+              }}
+            >
+              <div style={{
+                width: 42,
+                height: 42,
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(79, 70, 229, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <QrCode size={20} color="#4F46E5" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{userUpi}</span>
+                  <span className="chip chip-success" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
+                    Primary • Auto-Linked
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                  PaySphere Virtual Payment Address (VPA)
+                </div>
+              </div>
             </div>
           ) : (
             upiInstruments.map((inst, i) => (
@@ -448,7 +492,11 @@ export default function ProfilePage() {
           {/* Logout */}
           <button
             type="button"
-            onClick={() => addToast('Logged out of session', 'info')}
+            onClick={() => {
+              logout();
+              addToast('Logged out of session', 'info');
+              navigate('/login');
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',

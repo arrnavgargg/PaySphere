@@ -1,26 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import GreetingCard from '../components/home/GreetingCard';
 import BalanceCard from '../components/home/BalanceCard';
 import QuickActions from '../components/home/QuickActions';
 import RecentPayees from '../components/home/RecentPayees';
 import RecentTransactions from '../components/home/RecentTransactions';
-import { getAllCustomers } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState('Arnav');
+  const { user } = useAuth();
 
-  useEffect(() => {
-    getAllCustomers()
-      .then((customers) => {
-        if (customers && customers.length > 0 && customers[0].fullName) {
-          const firstName = customers[0].fullName.split(' ')[0];
-          setUserName(firstName);
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const displayName = user?.fullName?.split(' ')[0] || 'User';
 
   const handlePayeeSelect = (payee) => {
     navigate('/pay', { state: { mode: 'UPI', payeeId: payee.upi, payeeName: payee.name } });
@@ -28,7 +19,7 @@ export default function HomePage() {
 
   return (
     <div className="page fade-in">
-      <GreetingCard name={userName} />
+      <GreetingCard name={displayName} />
       <BalanceCard />
       <QuickActions />
       <RecentPayees onSelect={handlePayeeSelect} />
