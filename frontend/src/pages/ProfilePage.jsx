@@ -20,6 +20,7 @@ import {
 import { getAllCustomers, addCustomerInstrument } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import Avatar from '../components/shared/Avatar';
 import { SkeletonRow } from '../components/shared/SkeletonLoader';
 
@@ -31,6 +32,7 @@ const DEFAULT_BANK_ACCOUNTS = [
 export default function ProfilePage() {
   const { dark, toggle } = useTheme();
   const { addToast } = useToast();
+  const { user: authUser, logout } = useAuth();
   const navigate = useNavigate();
 
   const isDevMode = import.meta.env.VITE_DEV_MODE === 'true';
@@ -448,7 +450,11 @@ export default function ProfilePage() {
           {/* Logout */}
           <button
             type="button"
-            onClick={() => addToast('Logged out of session', 'info')}
+            onClick={() => {
+              logout();
+              addToast('Logged out of session', 'info');
+              navigate('/login');
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',

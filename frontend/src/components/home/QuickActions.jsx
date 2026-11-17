@@ -12,14 +12,14 @@ import {
 } from 'lucide-react';
 
 const actions = [
-  { label: 'Pay via UPI', icon: QrCode, mode: 'UPI', color: '#4F46E5' },
-  { label: 'Send to Contact', icon: Users, mode: 'UPI', color: '#7C3AED' },
-  { label: 'Pay to Bank Account', icon: Building2, mode: 'NET_BANKING', color: '#0891B2' },
-  { label: 'Card Payment', icon: CreditCard, mode: 'CREDIT_CARD', color: '#059669' },
-  { label: 'Net Banking', icon: Landmark, mode: 'NET_BANKING', color: '#D97706' },
-  { label: 'Recharge', icon: Smartphone, mode: 'UPI', color: '#EC4899' },
-  { label: 'Bills', icon: Receipt, mode: 'UPI', color: '#DC2626' },
-  { label: 'Scan Any QR', icon: ScanLine, mode: 'UPI', color: '#2563EB' },
+  { label: 'Pay via UPI', icon: QrCode, path: '/pay-qr', color: '#4F46E5' },
+  { label: 'Send to Contact', icon: Users, path: '/send-contact', color: '#7C3AED' },
+  { label: 'Pay to Bank', icon: Building2, path: '/pay-bank', color: '#0891B2' },
+  { label: 'Card Payment', icon: CreditCard, path: '/card-payment', color: '#059669' },
+  { label: 'Net Banking', icon: Landmark, path: '/net-banking', color: '#D97706' },
+  { label: 'Recharge', icon: Smartphone, path: '/recharge', color: '#EC4899' },
+  { label: 'Bills', icon: Receipt, path: '/recharge', color: '#DC2626' },
+  { label: 'Scan Any QR', icon: ScanLine, path: '/pay-qr', color: '#2563EB' },
 ];
 
 export default function QuickActions() {
@@ -28,7 +28,7 @@ export default function QuickActions() {
   return (
     <div style={{ marginBottom: 'var(--space-lg)' }}>
       <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: 'var(--space-md)' }}>
-        Quick Actions
+        Quick Actions & Payments
       </h3>
       <div style={{
         display: 'grid',
@@ -40,7 +40,7 @@ export default function QuickActions() {
           return (
             <button
               key={action.label}
-              onClick={() => navigate('/pay', { state: { mode: action.mode } })}
+              onClick={() => navigate(action.path)}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
