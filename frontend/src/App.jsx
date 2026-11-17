@@ -1,70 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import PaymentTerminal from './components/PaymentTerminal';
-import TransactionHistory from './components/TransactionHistory';
-import FraudIdempotencyLab from './components/FraudIdempotencyLab';
-import CustomerHub from './components/CustomerHub';
-import { checkServerHealth } from './api';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
+import Layout from './components/layout/Layout';
+import HomePage from './pages/HomePage';
+import PayFlow from './pages/PayFlow';
+import HistoryPage from './pages/HistoryPage';
+import ProfilePage from './pages/ProfilePage';
+import DevToolsPage from './pages/DevToolsPage';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('terminal');
-  const [serverOnline, setServerOnline] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  useEffect(() => {
-    const ping = async () => {
-      const isUp = await checkServerHealth();
-      setServerOnline(isUp);
-    };
-    ping();
-    const interval = setInterval(ping, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handlePaymentSuccess = () => {
-    setRefreshTrigger((prev) => prev + 1);
-  };
+  const isDevMode = import.meta.env.VITE_DEV_MODE === 'true';
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        serverOnline={serverOnline}
-      />
-
-      <main style={{ flex: 1, padding: '0 24px 60px' }}>
-        {activeTab === 'terminal' && (
-          <PaymentTerminal onPaymentSuccess={handlePaymentSuccess} />
-        )}
-        {activeTab === 'transactions' && (
-          <TransactionHistory refreshTrigger={refreshTrigger} />
-        )}
-        {activeTab === 'sandbox' && (
-          <FraudIdempotencyLab />
-        )}
-        {activeTab === 'customers' && (
-          <CustomerHub />
-        )}
-      </main>
-
-      <footer style={{
-        borderTop: '1px solid var(--border-color)',
-        padding: '20px 24px',
-        textAlign: 'center',
-        fontSize: '0.75rem',
-        color: 'var(--text-muted)',
-        background: 'rgba(10, 13, 20, 0.9)',
-      }}>
-        <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>PaySphere Universal Payment System &copy; 2026. Designed for team collaboration.</span>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <span>Spring Boot 3.5.x + Java 25 Backend</span>
-            <span>React 19 + Vite Frontend</span>
-            <span>H2 Double-Entry Ledger Engine</span>
-          </div>
-        </div>
-      </footer>
-    </div>
+    <ThemeProvider>
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/pay" element={<PayFlow />} />
+              <Route path="/history" element={<HistoryPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              {/* Dev tools hidden route - active only when VITE_DEV_MODE=true */}
+              {isDevMode ? (
+                <>
+                  <Route path="/dev-tools" element={<DevToolsPage />} />
+                  <Route path="/admin" element={<DevToolsPage />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/dev-tools" element={<Navigate to="/" replace />} />
+                  <Route path="/admin" element={<Navigate to="/" replace />} />
+                </>
+              )}
+              {/* Catch-all redirect */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
