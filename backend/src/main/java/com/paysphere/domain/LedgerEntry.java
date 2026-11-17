@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -23,7 +24,13 @@ public class LedgerEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false)
+    /**
+     * Foreign Key Owner: The 'ledger_entries' table holds the 'transaction_id' foreign key
+     * column referencing the 'transactions' table ('transactions.id').
+     * In the Transaction -> LedgerEntry composition relationship, this foreign key is non-nullable.
+     * The record's existence is intrinsically bound to its parent Transaction.
+     */
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "transaction_id", nullable = false)
     private Transaction transaction;
 
@@ -41,6 +48,16 @@ public class LedgerEntry {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    public LedgerEntry() {
+    }
+
+    public LedgerEntry(Transaction transaction, LedgerEntryType type, LedgerDirection direction, BigDecimal amount) {
+        this.transaction = transaction;
+        this.type = type;
+        this.direction = direction;
+        this.amount = amount;
+    }
+
     @PrePersist
     void onCreate() {
         if (this.createdAt == null) {
@@ -50,6 +67,10 @@ public class LedgerEntry {
 
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public Transaction getTransaction() {
@@ -86,5 +107,9 @@ public class LedgerEntry {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

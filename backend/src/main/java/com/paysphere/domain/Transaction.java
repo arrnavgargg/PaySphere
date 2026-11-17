@@ -36,11 +36,19 @@ public class Transaction {
     @Column(name = "idempotency_key", nullable = false, unique = true)
     private String idempotencyKey;
 
-    @ManyToOne(optional = false)
+    /**
+     * Mandatory Association: The Customer who initiated or is associated with the transaction.
+     * Table 'transactions' holds foreign key column 'customer_id' -> 'customers.id'.
+     */
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @ManyToOne
+    /**
+     * Optional Association / Aggregation: The PaymentInstrument used for payment processing.
+     * Table 'transactions' holds foreign key column 'instrument_id' -> 'payment_instruments.id'.
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "instrument_id")
     private PaymentInstrument instrument;
 
@@ -57,8 +65,30 @@ public class Transaction {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    /**
+     * COMPOSITION: A Transaction strictly owns its composed LedgerEntry audit trail.
+     * - cascade = CascadeType.ALL propagates all entity lifecycle events (persist, merge, remove, refresh, detach)
+     *   from Transaction to LedgerEntry.
+     * - orphanRemoval = true enforces that removing a LedgerEntry from this collection permanently deletes it
+     *   from the database.
+     * - A LedgerEntry cannot exist in isolation without an enclosing Transaction.
+     * - Foreign key ownership belongs to LedgerEntry (column 'transaction_id' in 'ledger_entries' table).
+     */
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<LedgerEntry> ledgerEntries = new ArrayList<>();
+
+    public Transaction() {
+    }
+
+    public Transaction(Customer customer, PaymentInstrument instrument, String idempotencyKey,
+                       BigDecimal amount, String currency, TransactionStatus status) {
+        this.customer = customer;
+        this.instrument = instrument;
+        this.idempotencyKey = idempotencyKey;
+        this.amount = amount;
+        this.currency = currency;
+        this.status = status;
+    }
 
     @PrePersist
     void onCreate() {
@@ -74,8 +104,16 @@ public class Transaction {
         return id;
     }
 
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public String getReferenceId() {
         return referenceId;
+    }
+
+    public void setReferenceId(String referenceId) {
+        this.referenceId = referenceId;
     }
 
     public String getIdempotencyKey() {
@@ -122,6 +160,10 @@ public class Transaction {
         return createdAt;
     }
 
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public PaymentInstrument getInstrument() {
         return instrument;
     }
@@ -134,8 +176,21 @@ public class Transaction {
         return Collections.unmodifiableList(ledgerEntries);
     }
 
+    public void setLedgerEntries(List<LedgerEntry> ledgerEntries) {
+        this.ledgerEntries = ledgerEntries != null ? ledgerEntries : new ArrayList<>();
+    }
+
     public void addLedgerEntry(LedgerEntry entry) {
-        ledgerEntries.add(entry);
-        entry.setTransaction(this);
+        if (entry != null) {
+            ledgerEntries.add(entry);
+            entry.setTransaction(this);
+        }
+    }
+
+    public void removeLedgerEntry(LedgerEntry entry) {
+        if (entry != null) {
+            ledgerEntries.remove(entry);
+            entry.setTransaction(null);
+        }
     }
 }
